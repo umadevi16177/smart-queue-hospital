@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Patient {
+  id                String   @id
+  name              String
+  phoneNumber       String
+  priority          String   @default("NORMAL")
+  requestedTests    String   // Stored as JSON string ['MRI', 'X-RAY']
+  currentStatus     String   @default("WAITING")
+  currentTest       String?
+  estimatedWaitTime Int      @default(0)
+  createdAt         DateTime @default(now())
+  feedback          Feedback?
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  patientId String   @unique
+  rating    Int
+  comments  String?
+  createdAt DateTime @default(now())
+}
+
+model Resource {
+  id                 String  @id
+  type               String
+  isAvailable        Boolean @default(true)
+  avgDurationMinutes Int
+}

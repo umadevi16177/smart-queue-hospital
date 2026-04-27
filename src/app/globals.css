@@ -1,0 +1,298 @@
+:root {
+  --bg-color: #f3f4f6;
+  --panel-bg: #ffffff;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  
+  --primary-blue: #2563eb;
+  --primary-blue-hover: #1d4ed8;
+  
+  --system-green: #15803d;
+  --system-green-bg: #dcfce7;
+  
+  --urgent-red: #dc2626;
+  --urgent-red-bg: #fee2e2;
+  --urgent-red-hover: #b91c1c;
+
+  --status-waiting: #fef9c3;
+  --status-waiting-text: #854d0e;
+  --status-progress: #dbeafe;
+  --status-progress-text: #1e3a8a;
+  --status-completed: #d1fae5;
+  --status-completed-text: #065f46;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Layout */
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--text-main);
+  color: white;
+  padding: 1rem 2rem;
+  height: 70px;
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.system-mode {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.mode-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.mode-auto .mode-dot { background-color: #22c55e; }
+.mode-manual .mode-dot { background-color: #ef4444; }
+
+.btn-danger {
+  background-color: var(--urgent-red);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.btn-danger:hover {
+  background-color: var(--urgent-red-hover);
+}
+
+/* Main Content */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Panel - Registration */
+.left-panel {
+  width: 30%;
+  background-color: var(--panel-bg);
+  border-right: 2px solid var(--border-color);
+  padding: 2rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.panel-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: var(--text-main);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.form-input {
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1.1rem;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+}
+
+/* Test Selection Buttons */
+.test-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.test-btn {
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  background: white;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.1s;
+}
+
+.test-btn[data-selected="true"] {
+  border-color: var(--primary-blue);
+  background-color: #eff6ff;
+  color: var(--primary-blue);
+}
+
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 1rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 1rem;
+  width: 100%;
+}
+.btn-primary:hover {
+  background-color: var(--primary-blue-hover);
+}
+.btn-primary:disabled {
+  background-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Right Panel - Queue */
+.right-panel {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--panel-bg);
+}
+
+.top-banner {
+  background-color: #1e293b;
+  color: white;
+  padding: 1.5rem 3rem;
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-align: center;
+  border-bottom: 4px solid var(--primary-blue);
+}
+
+.queue-container {
+  padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Table */
+.queue-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.queue-table th {
+  background-color: var(--bg-color);
+  padding: 1rem;
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.queue-table td {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 1.1rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.row-urgent {
+  background-color: var(--urgent-red-bg);
+}
+
+.token-number {
+  font-family: monospace;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--primary-blue);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge-waiting { background-color: var(--status-waiting); color: var(--status-waiting-text); }
+.badge-progress { background-color: var(--status-progress); color: var(--status-progress-text); }
+.badge-completed { background-color: var(--status-completed); color: var(--status-completed-text); }
+.badge-normal { background-color: #f3f4f6; color: #374151; }
+.badge-urgent { background-color: var(--urgent-red); color: white; }
+
+/* Actions */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-action {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: white;
+  cursor: pointer;
+}
+.btn-action:hover {
+  background: var(--bg-color);
+}
+.btn-action.urgent-toggle {
+  color: var(--urgent-red);
+  border-color: currentColor;
+}
+.btn-action.urgent-toggle:hover {
+  background: var(--urgent-red-bg);
+}
