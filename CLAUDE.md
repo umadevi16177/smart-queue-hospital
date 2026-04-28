@@ -1,6 +1,6 @@
 # CLAUDE.md — gstack Edition
 
-## Project: SmartQueue Hospital
+## Project: Smart Queue Hospital
 A diagnostic-workflow platform built on Garry Tan's recommended stack: FastAPI (Python) + Next.js.
 
 ## The gstack Workflow

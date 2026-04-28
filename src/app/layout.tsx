@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'SmartQueue AI - Hospital Flow Management',
+  title: 'Smart Queue AI - Hospital Flow Management',
   description: 'Next-gen psychiatric and diagnostic workflow load balancer.',
 };
 

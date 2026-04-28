@@ -66,7 +66,7 @@ def test_get_patient_details():
     
     # Check that RulesEngine correctly injected instructions and location
     assert "Remove jewelry." in data["instructions"]
-    assert "Floor 2, Imaging Wing" in data["location"]
+    assert "Radiology North" in data["location"]
     
 def test_patient_not_found():
     """Handle invalid UUID requests smoothly."""

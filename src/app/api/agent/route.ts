@@ -4,15 +4,17 @@ import { AgentEngine } from '@/lib/engines/agent-engine';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { patientId, message } = body;
+    const { patient_id, message } = body;
 
-    if (!patientId || !message) {
+    if (!patient_id || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const backendUrl = process.env.BACKEND_API_URL || 'http://host.docker.internal:8000';
-    const res = await fetch(`${backendUrl}/api/agent?patient_id=${patientId}&message=${encodeURIComponent(message)}`, {
-      method: 'POST'
+    const backendUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
+    const res = await fetch(`${backendUrl}/api/agent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id, message })
     });
 
     if (!res.ok) throw new Error('Agent failed');

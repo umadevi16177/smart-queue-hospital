@@ -1,23 +1,20 @@
 import { NextResponse } from 'next/server';
-import { QueueEngine } from '@/lib/engines/queue-engine';
+
+const BACKEND_URL = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phoneNumber, tests, priority } = body;
-
-    const backendUrl = process.env.BACKEND_API_URL || 'http://host.docker.internal:8000';
-    const res = await fetch(`${backendUrl}/api/patient?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phoneNumber)}&priority=${priority}`, {
+    const res = await fetch(`${BACKEND_URL}/api/patient`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tests)
+      body: JSON.stringify(body)
     });
-
-    if (!res.ok) throw new Error('Backend failed');
-    const patient = await res.json();
-    return NextResponse.json(patient);
+    
+    if (!res.ok) throw new Error('API failed');
+    const data = await res.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to register patient' }, { status: 500 });
   }
 }

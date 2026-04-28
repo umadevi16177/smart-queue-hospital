@@ -15,258 +15,257 @@ import {
   ChevronRight,
   AlertCircle,
   MapPin,
-  CalendarClock
+  CalendarClock,
+  Sparkles,
+  LogOut,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function PatientPortal() {
   const params = useParams();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [message, setMessage] = useState('');
-  const [chat, setChat] = useState<{ role: 'user' | 'agent', text: string, reasoning?: string }[]>([]);
+  const [chat, setChat] = useState<{ role: 'user' | 'agent', text: string, reasoning?: string, tool?: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [feedback, setFeedback] = useState('');
+  const [surveySubmitted, setSurveySubmitted] = useState(false);
 
+  // PLATINUM REAL-TIME SYNC
   useEffect(() => {
-    fetch(`/api/patient/${params.id}`)
-      .then(res => res.json())
-      .then(data => setPatient(data));
+    const fetchData = () => {
+      fetch(`/api/patient/${params.id}`)
+        .then(res => res.json())
+        .then(data => setPatient(data));
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
   }, [params.id]);
+
+  const submitSurvey = async () => {
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: params.id, rating, comments: feedback })
+      });
+      setSurveySubmitted(true);
+      setTimeout(() => window.location.href='/patient', 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const sendMessage = async () => {
     if (!message.trim()) return;
     
+    // Voice-enabled IVR logic
+    const speak = (text: string) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    };
+
     setLoading(true);
     const newChat = [...chat, { role: 'user' as const, text: message }];
     setChat(newChat);
     setMessage('');
 
-    const res = await fetch('/api/agent', {
-      method: 'POST',
-      body: JSON.stringify({ patientId: params.id, message })
-    });
-    const data = await res.json();
-
-    setChat([...newChat, { role: 'agent' as const, text: data.message, reasoning: data.reasoning }]);
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: params.id, message })
+      });
+      const data = await res.json();
+      setChat([...newChat, { role: 'agent' as const, text: data.message, reasoning: data.reasoning, tool: data.tool_used }]);
+      speak(data.message);
+    } catch (e) { console.error(e); }
     setLoading(false);
-    
-    const pRes = await fetch(`/api/patient/${params.id}`);
-    const pData = await pRes.json();
-    setPatient(pData);
   };
 
   if (!patient) return (
     <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-      <motion.div 
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        style={{ border: '4px solid var(--p1)', borderTopColor: 'transparent', borderRadius: '50%', width: '40px', height: '40px' }}
-      />
+      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ border: '4px solid var(--platinum-indigo)', borderTopColor: 'transparent', borderRadius: '50%', width: '40px', height: '40px' }} />
     </div>
   );
 
   return (
-    <main className="container" style={{ maxWidth: '1200px' }}>
+    <main className="container" style={{ maxWidth: '1400px', padding: '3rem' }}>
+      <div className="mesh-bg"></div>
+
       <motion.header 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="header" 
-        style={{ textAlign: 'left', alignItems: 'flex-start' }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4rem' }}
       >
-        <div className="status-dot-container" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', background: 'white', padding: '0.5rem 1.25rem', borderRadius: '100px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-          <span className="status-dot"></span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', letterSpacing: '0.05em' }}>LIVE SESSION ACTIVE</span>
+        <div>
+          <div className="status-pill" style={{ marginBottom: '1.5rem' }}>
+            <span className="pulse-emerald"></span>
+            PLATINUM CONNECTED • LIVE SESSION
+          </div>
+          <h1 style={{ fontSize: '5rem', fontWeight: 900, letterSpacing: '-4px', marginBottom: '1rem' }} className="text-gradient">
+            {patient.name}
+          </h1>
+          <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            Medical Identification: <span style={{ color: 'var(--platinum-indigo)' }}>#{patient.id.toUpperCase()}</span>
+          </p>
         </div>
-        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', marginBottom: '0.5rem' }}>{patient.name}</h1>
-        <p className="sub-header">Patient Diagnostic Portal • Medical ID: #{patient.id}</p>
+        <button onClick={() => setShowSurvey(true)} className="btn-premium" style={{ background: '#fff', color: '#000', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <LogOut size={18} />
+          Safe Release
+        </button>
       </motion.header>
 
-      <div className="responsive-grid">
-        {/* Status Section */}
-        <section style={{ display: 'grid', gap: '2rem' }}>
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
+      <div className="platinum-grid">
+        <div style={{ display: 'grid', gap: '2.5rem' }}>
+          {/* Main Status */}
+          <motion.section 
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="glass-card" 
-            style={{ padding: '2.5rem', borderLeft: '8px solid var(--p1)' }}
-          >
-            <span className="label-mini">Current Station & Location</span>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Activity size={32} style={{ color: 'var(--p1)' }} />
-              {patient.currentTest || 'COMPLETED'}
-            </div>
-            
-            {/* Proactive Wayfinding */}
-            {(patient as any).location && (
-              <div style={{ marginBottom: '1.25rem', color: '#64748b', fontWeight: 600, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <MapPin size={18} style={{ color: 'var(--p1)' }} />
-                Proceed to: {(patient as any).location}
-              </div>
-            )}
-
-            <div style={{ background: 'var(--p1)', color: 'white', display: 'inline-flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem 1rem', borderRadius: '12px', fontSize: '0.875rem', fontWeight: 800 }}>
-              <Clock size={16} />
-              EST. WAIT: {patient.estimatedWaitTime} MIN
-            </div>
-          </motion.div>
-
-          {/* Adaptive Scheduling Alert */}
-          {(patient as any).adaptive_scheduling_needed && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1.5rem', borderRadius: '20px', color: '#991b1b', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}
-            >
-              <CalendarClock size={24} style={{ color: '#dc2626', flexShrink: 0 }} />
-              <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', fontWeight: 800, fontSize: '1rem' }}>High Wait Time Detected</h3>
-                <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', fontWeight: 500 }}>Your station is currently experiencing heavy load. You do not need to wait here.</p>
-                <button 
-                  onClick={() => { setMessage('I would like to reserve a later time.'); sendMessage(); }}
-                  style={{ background: '#dc2626', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem' }}>
-                  Reserve Later Time
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
             className="glass-card"
+            style={{ borderLeft: '12px solid var(--platinum-indigo)', position: 'relative', overflow: 'hidden' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-              <Info size={20} style={{ color: 'var(--p1)' }} />
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0 }}>Medical Instructions</h2>
-            </div>
-            {(patient as any).instructions?.length > 0 ? (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {(patient as any).instructions.map((inst: string, i: number) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + (i * 0.1) }}
-                    key={i} 
-                    style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'white', padding: '1.25rem', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.03)', boxShadow: '0 4px 6px rgba(0,0,0,0.01)' }}
-                  >
-                    <div style={{ minWidth: '32px', height: '32px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--p1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.875rem' }}>
-                      {i + 1}
-                    </div>
-                    <p style={{ fontWeight: 600, fontSize: '0.95rem', margin: 0 }}>{inst}</p>
-                  </motion.div>
-                ))}
+            <Sparkles style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', color: 'var(--platinum-indigo)', opacity: 0.2 }} size={48} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--platinum-indigo)', letterSpacing: '0.1em' }} >Active Station</span>
+            <h2 style={{ fontSize: '3.5rem', fontWeight: 900, margin: '0.5rem 0 1.5rem 0', color: 'var(--platinum-dark)' }}>
+              {(patient as any).current_test || 'JOURNEY COMPLETE'}
+            </h2>
+            
+            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(79, 70, 229, 0.1)', padding: '0.75rem 1.25rem', borderRadius: '16px', color: 'var(--platinum-indigo)', fontWeight: 900 }}>
+                <Activity size={20} />
+                SEQ #{ (patient as any).queue_position || '-' }
               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '2rem', background: '#f8fafc', borderRadius: '20px' }}>
-                <AlertCircle size={24} style={{ margin: '0 auto 0.5rem', opacity: 0.3 }} />
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>No specific instructions for this station.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', padding: '0.75rem 1.25rem', borderRadius: '16px', color: 'var(--platinum-emerald)', fontWeight: 700 }}>
+                <Clock size={20} />
+                {(patient as any).estimated_wait_time} MIN WAIT
+              </div>
+            </div>
+
+            {/* DIGITAL FLOOR PLAN MOCKUP */}
+            <div style={{ marginBottom: '2rem', padding: '2rem', background: '#f8fafc', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
+               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748b', marginBottom: '1rem', textTransform: 'uppercase' }}>Digital Floor Plan</div>
+               <div style={{ height: '150px', background: '#fff', borderRadius: '12px', border: '2px dashed #cbd5e1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', padding: '4px' }}>
+                  {['Wing A', 'Wing B', 'Wing C', 'Wing D'].map(wing => (
+                    <div key={wing} style={{ 
+                      background: (patient as any).location?.includes(wing) ? 'rgba(79, 70, 229, 0.1)' : '#f1f5f9',
+                      border: (patient as any).location?.includes(wing) ? '2px solid var(--platinum-indigo)' : 'none',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                      color: (patient as any).location?.includes(wing) ? 'var(--platinum-indigo)' : '#64748b'
+                    }}>
+                       {wing}
+                       {(patient as any).location?.includes(wing) && <MapPin size={12} style={{ marginTop: '4px' }} />}
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            {(patient as any).instructions && (
+              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0', display: 'flex', gap: '1rem' }}>
+                <div style={{ color: 'var(--platinum-indigo)' }}> <Info size={24} /> </div>
+                <div>
+                   <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.25rem' }}>AI Wayfinding Protocol</div>
+                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500, lineHeight: 1.5 }}>
+                     {(patient as any).instructions}
+                   </div>
+                </div>
               </div>
             )}
-          </motion.div>
-        </section>
+          </motion.section>
 
-        {/* AI Agent Section */}
-        <motion.section 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="glass-card" 
-          style={{ display: 'flex', flexDirection: 'column', height: '700px', padding: '0', overflow: 'hidden' }}
-        >
-          <div style={{ padding: '2rem', borderBottom: '1px solid rgba(0,0,0,0.05)', background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ background: 'var(--p1)', color: 'white', padding: '0.75rem', borderRadius: '16px' }}>
-                <Bot size={24} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>Hospital Assistant</h2>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.02em' }}>POWERED BY SMARTQUEUE AI • ACTIVE</p>
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <AnimatePresence>
-              {chat.length === 0 && (
-                <div style={{ textAlign: 'center', marginTop: '4rem', opacity: 0.5 }}>
-                  <BrainCircuit size={48} style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontWeight: 600 }}>I'm here to help with your diagnostic journey.</p>
-                </div>
-              )}
-              {chat.map((c, i) => (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  key={i} 
-                  style={{ alignSelf: c.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}
-                >
-                  <div style={{ display: 'flex', gap: '0.75rem', flexDirection: c.role === 'user' ? 'row-reverse' : 'row' }}>
-                    <div style={{ minWidth: '32px', height: '32px', borderRadius: '50%', background: c.role === 'user' ? 'white' : 'var(--p1)', color: c.role === 'user' ? 'var(--p1)' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                      {c.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                    </div>
-                    <div className={c.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-agent'}>
-                      {c.text}
+          {/* Journey Path */}
+          <motion.section initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="glass-card">
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <ChevronRight size={24} style={{ color: 'var(--platinum-indigo)' }} />
+              Prescribed Roadmap
+            </h3>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {(patient as any).requested_tests?.map((test: string, i: number) => {
+                const isCurrent = test === (patient as any).current_test;
+                const isDone = (patient as any).completed_tests?.includes(test);
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem 2rem', background: isCurrent ? '#fff' : 'rgba(0,0,0,0.01)', borderRadius: '24px', border: isCurrent ? '2px solid var(--platinum-indigo)' : '1px solid rgba(0,0,0,0.05)', opacity: isDone ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <div style={{ padding: '0.3rem 0.6rem', background: '#f1f5f9', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 900, color: '#64748b' }}> #{i + 1} </div>
+                        <span style={{ fontWeight: 800, color: isCurrent ? 'var(--platinum-indigo)' : 'var(--platinum-dark)', fontSize: '1.1rem' }}>{test}</span>
+                      </div>
+                      {isDone ? <div style={{ color: 'var(--platinum-emerald)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 900, fontSize: '0.7rem' }}> <CheckCircle2 size={14} /> VERIFIED </div> : <div style={{ padding: '0.25rem 0.75rem', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, background: isCurrent ? 'var(--platinum-indigo)' : '#e2e8f0', color: isCurrent ? '#fff' : '#64748b' }}> {isCurrent ? 'NEXT STATION' : 'IN QUEUE'} </div>}
                     </div>
                   </div>
-                  {c.reasoning && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
-                      style={{ 
-                        fontSize: '0.7rem', 
-                        marginTop: '0.75rem', 
-                        color: 'var(--p1)',
-                        background: 'rgba(99, 102, 241, 0.05)',
-                        padding: '0.6rem 1rem',
-                        borderRadius: '100px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontWeight: 700,
-                        marginLeft: '2.5rem'
-                      }}
-                    >
-                      <BrainCircuit size={12} />
-                      AI THINKING: {c.reasoning}
-                    </motion.div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {loading && (
-              <div style={{ alignSelf: 'flex-start', background: 'white', padding: '1rem 1.5rem', borderRadius: '24px', display: 'flex', gap: '0.5rem', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                <span className="status-dot" style={{ width: '8px', height: '8px' }}></span>
-                <span className="status-dot" style={{ width: '8px', height: '8px', animationDelay: '0.2s' }}></span>
-                <span className="status-dot" style={{ width: '8px', height: '8px', animationDelay: '0.4s' }}></span>
-              </div>
-            )}
-          </div>
-          
-          <div style={{ padding: '2rem', background: '#f8fafc', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <input 
-                className="input-luxury" 
-                placeholder="Ask about your station, wait time..." 
-                value={message}
-                onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                onChange={e => setMessage(e.target.value)}
-                style={{ background: 'white', borderRadius: '100px', fontSize: '1rem' }}
-              />
-              <button 
-                className="btn-premium" 
-                onClick={sendMessage} 
-                disabled={loading || !message.trim()}
-                style={{ borderRadius: '50%', width: '56px', height: '56px', padding: 0, minWidth: '56px' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {loading ? <Clock size={20} /> : <Send size={20} />}
-                </div>
-              </button>
+                );
+              })}
+            </div>
+          </motion.section>
+        </div>
+
+        {/* AGENTIC CONCIERGE */}
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '800px' }} className="glass-card" >
+           <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ padding: '0.75rem', background: 'var(--platinum-indigo)', borderRadius: '16px', color: 'white' }}><Bot size={28} /></div>
+            <div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 900 }}>Platinum Concierge</h3>
+              <p style={{ fontSize: '0.7rem', color: 'var(--platinum-emerald)', fontWeight: 800, letterSpacing: '0.05em' }}>AGENTIC AI SYSTEM ACTIVE</p>
             </div>
           </div>
-        </motion.section>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingRight: '1rem' }}>
+            {chat.map((c, i) => (
+              <div key={i} style={{ alignSelf: c.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '90%' }}>
+                <div className={c.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-agent'}>{c.text}</div>
+                {c.reasoning && <div style={{ fontSize: '0.6rem', color: 'var(--platinum-indigo)', marginTop: '0.4rem', fontWeight: 700 }}>{c.reasoning}</div>}
+              </div>
+            ))}
+            {loading && <div style={{ opacity: 0.5 }}>Concierge is thinking...</div>}
+          </div>
+          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
+            <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()} placeholder="Ask the concierge..." style={{ flex: 1, padding: '1rem 1.5rem', borderRadius: '16px', border: '1px solid var(--glass-border)', outline: 'none', background: 'white' }} />
+            <button onClick={sendMessage} className="btn-premium" style={{ width: '56px', height: '56px', padding: 0, borderRadius: '50%' }}><Send size={24} /></button>
+          </div>
+        </motion.div>
       </div>
+
+      {/* RELEASE SURVEY MODAL */}
+      <AnimatePresence>
+        {showSurvey && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+             <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ maxWidth: '450px', width: '100%', padding: '3rem', textAlign: 'center' }}>
+                {!surveySubmitted ? (
+                  <>
+                    <Sparkles style={{ margin: '0 auto 1.5rem', color: 'var(--platinum-indigo)' }} size={48} />
+                    <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1rem' }}>Rate Your Experience</h2>
+                    <p style={{ color: '#64748b', marginBottom: '2rem', fontWeight: 600 }}>Thank you for using SmartQueue AI. How was your diagnostic journey today?</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
+                       {[1,2,3,4,5].map(star => (
+                         <button key={star} onClick={() => setRating(star)} style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', opacity: star <= rating ? 1 : 0.2 }}>⭐️</button>
+                       ))}
+                    </div>
+                    <textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="Any specific comments for the clinical team?" style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem', height: '100px', outline: 'none' }} />
+                    <button onClick={submitSurvey} className="btn-premium" style={{ width: '100%', padding: '1.25rem' }}>Submit Feedback</button>
+                    <button onClick={() => setShowSurvey(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', marginTop: '1rem', cursor: 'pointer', fontWeight: 700 }}>Continue Session</button>
+                  </>
+                ) : (
+                  <div style={{ padding: '2rem' }}>
+                     <div style={{ width: '60px', height: '60px', background: 'var(--platinum-emerald)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: 'white' }}> <CheckCircle2 size={32} /> </div>
+                     <h3 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Feedback Received</h3>
+                     <p style={{ color: '#64748b', fontWeight: 600 }}>Thank you for helping us optimize healthcare transparency.</p>
+                  </div>
+                )}
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

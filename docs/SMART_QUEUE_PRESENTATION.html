@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Queue - Executive Discovery Demo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;600;900&display=swap');
+        
+        :root {
+            --platinum-indigo: #6366f1;
+            --platinum-slate: #1e293b;
+            --platinum-silver: #f1f5f9;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Outfit', sans-serif;
+            background: var(--platinum-slate);
+            color: white;
+            overflow: hidden;
+        }
+
+        .presentation-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            box-sizing: border-box;
+        }
+
+        .slide.active { opacity: 1; z-index: 10; }
+
+        .image-container {
+            width: 80%;
+            height: 65%;
+            background: #000;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+            border: 8px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .caption-container {
+            margin-top: 2rem;
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .caption-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1.5px;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .caption-text {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .nav-controls {
+            position: absolute;
+            bottom: 3rem;
+            display: flex;
+            gap: 2rem;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 1rem 2rem;
+            border-radius: 100px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 6px;
+            background: var(--platinum-indigo);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar" id="progress"></div>
+
+    <div class="presentation-container">
+        <!-- SLIDE 1 -->
+        <div class="slide active" id="slide-0">
+            <div class="image-container">
+                <img src="/Users/UMADEVI/.gemini/antigravity/brain/27b3a3f3-a6c4-4770-869a-25e46659c306/dashboard_initial_1777363734960.png" alt="Operational Dashboard">
+            </div>
+            <div class="caption-container">
+                <div class="caption-title">Clinical Operations Dashboard</div>
+                <div class="caption-text">Immediate situational awareness. The Strategic Metric Ribbon tracks throughput, wait variance, and clinical alerts in a single pane.</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2 -->
+        <div class="slide" id="slide-1">
+            <div class="image-container">
+                <img src="/Users/UMADEVI/.gemini/antigravity/brain/27b3a3f3-a6c4-4770-869a-25e46659c306/admission_scan_form_filled_1777363764148.png" alt="Diagnostic Admission">
+            </div>
+            <div class="caption-container">
+                <div class="caption-title">Diagnostic Admission & Triage</div>
+                <div class="caption-text">Grounded clinical intake. Admins define patient priority and diagnostic suites, initializing a deterministic clinical roadmap.</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3 -->
+        <div class="slide" id="slide-2">
+            <div class="image-container">
+                <img src="/Users/UMADEVI/.gemini/antigravity/brain/27b3a3f3-a6c4-4770-869a-25e46659c306/census_hud_neural_reasoning_1777364053916.png" alt="Audit Log">
+            </div>
+            <div class="caption-container">
+                <div class="caption-title">Clinical Decision Auditing</div>
+                <div class="caption-text">Total transparency. Every AI-driven re-sequence is logged for compliance, ensuring staff always understand the logic behind the queue.</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4 -->
+        <div class="slide" id="slide-3">
+            <div class="image-container">
+                <img src="/Users/UMADEVI/.gemini/antigravity/brain/27b3a3f3-a6c4-4770-869a-25e46659c306/efficiency_analytics_view_1777356216589.png" alt="ROI Analytics">
+            </div>
+            <div class="caption-container">
+                <div class="caption-title">Unit Performance ROI</div>
+                <div class="caption-text">Economic reclaiming. Quantify the fiscal impact of throughput optimization with high-fidelity analytics and unit cost tracking.</div>
+            </div>
+        </div>
+
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="prevSlide()">PREVIOUS</button>
+            <button class="nav-btn" onclick="nextSlide()" style="background: var(--platinum-indigo);">NEXT SCENE</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progress = document.getElementById('progress');
+
+        function updateSlide() {
+            slides.forEach((s, i) => {
+                s.classList.toggle('active', i === currentSlide);
+            });
+            progress.style.width = ((currentSlide + 1) / slides.length) * 100 + '%';
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            updateSlide();
+        }
+
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            updateSlide();
+        }
+
+        // Auto-play every 8 seconds
+        setInterval(nextSlide, 8000);
+        updateSlide();
+    </script>
+</body>
+</html>

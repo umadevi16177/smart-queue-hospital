@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from . import models, engines, agent
 from sqlalchemy import create_engine
 import uuid
+import datetime
 from pydantic import BaseModel
 
 class PatientCreate(BaseModel):
@@ -12,7 +13,11 @@ class PatientCreate(BaseModel):
     tests: list[str]
     priority: str = "NORMAL"
 
-app = FastAPI(title="SmartQueue Hospital API")
+class ChatRequest(BaseModel):
+    patient_id: str
+    message: str
+
+app = FastAPI(title="Smart Queue Hospital API")
 
 # Setup CORS for Next.js frontend
 app.add_middleware(
@@ -52,6 +57,49 @@ def register_patient(patient: PatientCreate, db: Session = Depends(get_db)):
     db.refresh(new_patient)
     return new_patient
 
+@app.get("/api/queue")
+def get_queue(db: Session = Depends(get_db)):
+    patients = db.query(models.Patient).all()
+    
+    # Calculate queue positions per test type
+    positions = {} # {test_type: [patient_ids_sorted_by_time]}
+    active_patients = [p for p in patients if p.current_status != "COMPLETED"]
+    
+    for p in active_patients:
+        if p.current_test:
+            if p.current_test not in positions:
+                positions[p.current_test] = []
+            positions[p.current_test].append(p)
+            
+    # Sort each list by priority then by created_at
+    priority_map = {"EMERGENCY": 0, "URGENT": 1, "NORMAL": 2}
+    for test in positions:
+        positions[test].sort(key=lambda x: (priority_map.get(x.priority, 2), x.created_at))
+
+    # Serialize to match frontend mapping
+    result = []
+    for p in patients:
+        queue_pos = None
+        if p.current_test and p.current_status != "COMPLETED":
+            try:
+                # Find index in the sorted list for that test
+                test_list = positions.get(p.current_test, [])
+                queue_pos = next(i for i, x in enumerate(test_list) if x.id == p.id) + 1
+            except StopIteration:
+                queue_pos = None
+
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "requested_tests": p.requested_tests,
+            "current_test": p.current_test,
+            "status": p.current_status,
+            "priority": p.priority,
+            "estimated_wait_time": p.estimated_wait_time,
+            "queue_position": queue_pos
+        })
+    return result
+
 @app.get("/api/patient/{patient_id}")
 def get_patient(patient_id: str, db: Session = Depends(get_db)):
     patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
@@ -69,6 +117,7 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)):
         "id": patient.id,
         "name": patient.name,
         "current_test": patient.current_test,
+        "requested_tests": patient.requested_tests,
         "location": location,
         "estimated_wait_time": patient.estimated_wait_time,
         "instructions": instructions,
@@ -112,21 +161,92 @@ def toggle_resource(test_type: str, is_offline: bool):
         offline_resources.remove(test_type)
     return {"success": True, "offline_resources": offline_resources}
 
-@app.post("/api/feedback")
-def submit_feedback(patient_id: str, rating: int, comments: str = None, db: Session = Depends(get_db)):
-    # Simple endpoint matching the Prisma feedback model
-    return {"success": True, "message": "Feedback collected securely."}
+# AI Reasoning Logs for the Command Center HUD
+ai_logs = [
+    "System initialized. Optimizing 5 clinical pathways.",
+    "Resource Audit: MRI Suite 1 performance optimal at 98%."
+]
 
-@app.post("/api/agent")
-async def chat_with_agent(patient_id: str, message: str, db: Session = Depends(get_db)):
+def add_log(msg: str):
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    ai_logs.insert(0, f"[{timestamp}] {msg}")
+    if len(ai_logs) > 10: ai_logs.pop()
+
+@app.post("/api/patient/reroute")
+def reroute_patient(patient_id: str, db: Session = Depends(get_db)):
     patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     
-    # Mocking patient data for the agent
-    p_data = {"current_test": patient.current_test, "estimated_wait_time": patient.estimated_wait_time}
-    return await agent.AgentEngine.process_query(p_data, message)
+    # 1. EMERGENCY BUMP
+    patient.priority = "EMERGENCY"
+    patient.estimated_wait_time = 2 
+    
+    # 2. SYSTEM-WIDE RECALCULATION
+    others = db.query(models.Patient).filter(models.Patient.id != patient_id).all()
+    for other in others:
+        other.estimated_wait_time += 15 
+    
+    add_log(f"CRITICAL OVERRIDE: {patient.name} bumped to EMERGENCY. Ripple applied to {len(others)} patients.")
+    db.commit()
+    return {"success": True}
+
+@app.get("/api/logs")
+def get_logs():
+    return ai_logs
+
+@app.post("/api/simulate/surge")
+def simulate_surge(db: Session = Depends(get_db)):
+    """Simulates a sudden influx of 5 emergency cases to test neural load balancing."""
+    surge_names = ["Emergency Alpha", "Emergency Beta", "Critical Gamma", "Trauma Delta", "Cardiac Epsilon"]
+    for name in surge_names:
+        p_id = str(uuid.uuid4())
+        new_p = models.Patient(
+            id=p_id,
+            name=f"🚨 {name}",
+            phone_number="911-EMERGENCY",
+            priority="EMERGENCY",
+            requested_tests=["CT_SCAN", "MRI"],
+            current_status="WAITING",
+            estimated_wait_time=5
+        )
+        db.add(new_p)
+    add_log(f"NEURAL STRESS TEST TRIGGERED: 5 high-acuity arrivals detected. Re-optimizing hospital throughput.")
+    db.commit()
+    return {"success": True}
+
+@app.post("/api/feedback")
+def submit_feedback(patient_id: str, rating: int, comments: str = None, db: Session = Depends(get_db)):
+    feedback = models.Feedback(patient_id=patient_id, rating=rating, comments=comments)
+    db.add(feedback)
+    add_log(f"Patient Satisfaction Update: Received {rating}/5 stars from Session #{patient_id[:6]}")
+    db.commit()
+    return {"success": True}
+
+@app.post("/api/agent")
+async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
+    patient = db.query(models.Patient).filter(models.Patient.id == request.patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Enriching patient data for the agent to ensure high-quality reasoning
+    p_data = {
+        "current_test": patient.current_test, 
+        "estimated_wait_time": patient.estimated_wait_time,
+        "status": patient.current_status,
+        "name": patient.name
+    }
+    print(f"AGENT_DEBUG: Processing query for {patient.name} | Status: {patient.current_status}")
+    return await agent.AgentEngine.process_query(p_data, request.message)
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Optional: Only mount static files if we are in production mode and directory exists
+    frontend_path = os.path.join(os.path.dirname(__file__), "../../out")
+    if os.path.exists(frontend_path):
+        from fastapi.staticfiles import StaticFiles
+        app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
+    
     uvicorn.run(app, host="0.0.0.0", port=8000)

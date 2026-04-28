@@ -15,6 +15,8 @@ class Patient(Base):
     current_status = Column(String, default="WAITING") # WAITING, IN_PROGRESS, COMPLETED
     current_test = Column(String, nullable=True)
     estimated_wait_time = Column(Integer, default=0)
+    is_deferred = Column(Boolean, default=False)
+    deferred_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Feedback(Base):
